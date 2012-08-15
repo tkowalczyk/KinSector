@@ -1,0 +1,17 @@
+﻿<Window x:Class="KinSector.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="KinSector - secure your room!" Height="600" Width="700" 
+        WindowStartupLocation="CenterScreen">
+    <Grid>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition />
+        </Grid.ColumnDefinitions>
+        <Grid.RowDefinitions>
+            <RowDefinition />
+            <RowDefinition Height="100"/>
+        </Grid.RowDefinitions>
+        <Image x:Name="kinectColorView" Grid.Column="0" Grid.Row="0" Stretch="Fill"/>
+        <Label x:Name="skeletonActive" Grid.Column="0" Grid.Row="1" HorizontalContentAlignment="Center" Foreground="Red" FontSize="20"/>
+    </Grid>
+</Window>
