@@ -9,3 +9,7 @@ obj
 
 # mstest test results
 TestResults
+
+# Twilio private settings
+
+PRIVATE.txt

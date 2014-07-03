@@ -1,13 +1,14 @@
-﻿using System;
+﻿using Microsoft.Kinect;
+using Microsoft.Speech.AudioFormat;
+using Microsoft.Speech.Recognition;
+using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Net;
 using System.Windows;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
-using Microsoft.Kinect;
-using Microsoft.Speech.AudioFormat;
-using Microsoft.Speech.Recognition;
+using Twilio;
 
 namespace KinSector
 {
@@ -45,16 +46,6 @@ namespace KinSector
         private const string kinectPhoto = "photo.jpg";
 
         /// <summary>
-        /// Open API application key
-        /// </summary>
-        private const string AppKey = "";
-
-        /// <summary>
-        /// Receiver telephone number
-        /// </summary>
-        private const string TelNumb = "";
-
-        /// <summary>
         /// MMS title
         /// </summary>
         private const string MMSTitle = "Someone is in your room!";
@@ -69,10 +60,13 @@ namespace KinSector
         /// </summary>
         private const string FilePath = "photo.jpg";
 
-        /// <summary>
-        /// URL to the Open API service
-        /// </summary>
-        private const string queryURL = "https://developers.t-mobile.pl/api/messaging/";
+        /// KEEP THIS DATA PRIVATE
+        /// PRIVATE ZONE
+        private const string AccountSid = "";
+        private const string AuthToken = "";
+        private string MyMobileNumber = "";
+        private string MyTwilioNumber = "";
+        /// PRIVATE ZONE
 
         /// <summary>
         /// Set tracking state
@@ -90,7 +84,7 @@ namespace KinSector
                 if (tracking != value)
                 {
                     TakePhoto(kinectPhoto);
-                    SendAlertViaMMS(TelNumb, MMSTitle);
+                    SendAlertViaMMS(MyMobileNumber, MMSTitle);
                 }
 
                 tracking = value;
@@ -112,7 +106,7 @@ namespace KinSector
             {
                 if (handsAbove != value)
                 {
-                    SendAlertViaSMS(TelNumb, SMSContent);
+                    SendAlertViaSMS(MyMobileNumber, SMSContent);
                 }
 
                 handsAbove = value;
@@ -275,13 +269,13 @@ namespace KinSector
         private void SpeechRecognized(object sender, SpeechRecognizedEventArgs e)
         {
             // Speech utterance confidence below which we treat speech as if it hadn't been heard
-            const double ConfidenceThreshold = 0.8;
+            const double ConfidenceThreshold = 0.5;
 
             if (e.Result.Confidence >= ConfidenceThreshold)
             {
                 Console.WriteLine("Recognized: " + e.Result.Text);
                 string content = "Someone said one of warning words: " + e.Result.Text;
-                SendAlertViaSMS(TelNumb, content);
+                SendAlertViaSMS(MyMobileNumber, content);
             }
         }
 
@@ -302,25 +296,31 @@ namespace KinSector
         /// </summary>
         private void SendAlertViaSMS(string TelephoneNumber, string TextToSend)
         {
-            string querySMS = string.Format("sms?to={0}&text={1}&appkey={2}", TelephoneNumber, TextToSend, AppKey);
-
-            if (!AreHandsBeingAbove)
+            if(!AreHandsBeingAbove)
             {
-                var uri = new Uri(string.Format(queryURL + querySMS));
-
-                if (uri.Scheme == Uri.UriSchemeHttps)
+                if(!string.IsNullOrEmpty(AccountSid) && !string.IsNullOrEmpty(AuthToken))
                 {
-                    var request = WebRequest.Create(uri);
-                    request.Method = WebRequestMethods.Http.Get;
+                    var client = new TwilioRestClient(AccountSid, AuthToken);
 
-                    using (var response = request.GetResponse())
+                    var people = new Dictionary<string, string>() 
+                    { 
+                        {MyMobileNumber,"Tomasz Kowalczyk"}
+                    };
+
+                    foreach (var person in people)
                     {
-                        using (var reader = new StreamReader(response.GetResponseStream()))
-                        {
-                            string tmp = reader.ReadToEnd();
-                            Console.WriteLine(tmp);
-                        }
-                    }
+                        client.SendMessage(
+                            MyTwilioNumber, 
+                            person.Key,     
+                            string.Format("Hey {0}, {1}", person.Value, SMSContent)
+                        );
+
+                        Console.WriteLine(string.Format("Sent message to {0}", person.Value));
+                    }   
+                }
+                else
+                {
+                    MessageBox.Show("Please provide your Twilio credentials: AccountSid and AuthToken");
                 }
             }
         }
@@ -351,39 +351,24 @@ namespace KinSector
         /// </summary>
         private void SendAlertViaMMS(string TelephoneNumber, string TitleForMMS)
         {
-            string queryMMS = string.Format("mms?to={0}&title={1}&appkey={2}", TelephoneNumber, TitleForMMS, AppKey);
-
-            if (!AreSkeletonsBeingTracked)
+            if(!AreSkeletonsBeingTracked)
             {
-                byte[] bytes = null;
-                FileStream fs = new FileStream(FilePath, FileMode.Open, FileAccess.Read);
-                BinaryReader br = new BinaryReader(fs);
-                long numBytes = new FileInfo(FilePath).Length;
-                bytes = br.ReadBytes((int)numBytes);
+                //var client = new TwilioRestClient(AccountSid, AuthToken);
 
-                var uri = new Uri(string.Format(queryURL + queryMMS));
+                //var people = new Dictionary<string, string>() 
+                //    { 
+                //        {MyMobileNumber,"Tomasz Kowalczyk"}
+                //    };
 
-                if (uri.Scheme == Uri.UriSchemeHttps)
-                {
-                    var request = WebRequest.Create(uri);
-                    request.Method = WebRequestMethods.Http.Post;
-                    request.ContentType = "image/jpg";
-                    request.ContentLength = bytes.Length;
+                //foreach (var person in people)
+                //{
+                //    var message = client.SendMessage(
+                //    MyTwilioNumber,
+                //    MyMobileNumber,
+                //    MMSTitle, new string[] { FilePath });
 
-                    using (var stream = request.GetRequestStream())
-                    {
-                        stream.Write(bytes, 0, bytes.Length);
-                    }
-
-                    using (var response = request.GetResponse())
-                    {
-                        using (var reader = new StreamReader(response.GetResponseStream()))
-                        {
-                            string tmp = reader.ReadToEnd();
-                            Console.WriteLine(tmp);
-                        }
-                    }
-                }
+                //    Console.WriteLine(string.Format("Sent message to {0}", person.Value));
+                //}   
             }
         }
         #endregion

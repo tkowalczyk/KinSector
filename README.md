@@ -1,7 +1,7 @@
 KinSector
 =========
 
-This application use [Kinect for Windows SDK](http://www.microsoft.com/en-us/kinectforwindows/ "Kinect for Windows SDK") with [T-Mobile OpenAPI](https://developers.t-mobile.pl/ "T-Mobile OpenAPI"). 
+This application use [Kinect for Windows SDK](http://www.microsoft.com/en-us/kinectforwindows/ "Kinect for Windows SDK") with [Twilio](https://www.twilio.com/docs/csharp/install "Twilio"). 
 
 ## Quick overview ##
 
@@ -15,7 +15,7 @@ This application use [Kinect for Windows SDK](http://www.microsoft.com/en-us/kin
 
 ## How does it work? ##
 
-[T-Mobile OpenAPI](https://developers.t-mobile.pl/ "T-Mobile OpenAPI") is very simple to use so I just had to code it in .NET world.
+[Twilio](https://www.twilio.com/docs/csharp/install "Twilio") is very simple to use so I just had to use its REST API with helpful NuGet package.
 
 **Taking a photo using Kinect:**
 
@@ -32,56 +32,53 @@ This application use [Kinect for Windows SDK](http://www.microsoft.com/en-us/kin
 	}
 
 
-**Reading a photo from specific path and building header for MMS:**
+**Recognize *help* word and sends SMS**
 
-	byte[] bytes = null;  
-	FileStream fs = new FileStream(FilePath, FileMode.Open, FileAccess.Read);  
-	BinaryReader br = new BinaryReader(fs);  
-	long numBytes = new FileInfo(FilePath).Length;  
-	bytes = br.ReadBytes((int)numBytes);  
-	
-                var uri = new Uri(string.Format(queryURL + queryMMS));
+	private void SpeechRecognized(object sender, SpeechRecognizedEventArgs e)
+        {
+            // Speech utterance confidence below which we treat speech as if it hadn't been heard
+            const double ConfidenceThreshold = 0.5;
 
-                if (uri.Scheme == Uri.UriSchemeHttps)
+            if (e.Result.Confidence >= ConfidenceThreshold)
+            {
+                Console.WriteLine("Recognized: " + e.Result.Text);
+                string content = "Someone said one of warning words: " + e.Result.Text;
+                SendAlertViaSMS(MyMobileNumber, content);
+            }
+        }
+
+**Sending SMS using Twilio REST API in .NET**
+
+	private void SendAlertViaSMS(string TelephoneNumber, string TextToSend)
+        {
+            if(!AreHandsBeingAbove)
+            {
+                if(!string.IsNullOrEmpty(AccountSid) && !string.IsNullOrEmpty(AuthToken))
                 {
-                    var request = WebRequest.Create(uri);
-                    request.Method = WebRequestMethods.Http.Post;
-                    request.ContentType = "image/jpg";
-                    request.ContentLength = bytes.Length;
+                    var client = new TwilioRestClient(AccountSid, AuthToken);
 
-                    using (var stream = request.GetRequestStream())
+                    var people = new Dictionary<string, string>() 
+                    { 
+                        {MyMobileNumber,"Tomasz Kowalczyk"}
+                    };
+
+                    foreach (var person in people)
                     {
-                        stream.Write(bytes, 0, bytes.Length);
-                    }
+                        client.SendMessage(
+                            MyTwilioNumber, 
+                            person.Key,     
+                            string.Format("Hey {0}, {1}", person.Value, SMSContent)
+                        );
 
-                    using (var response = request.GetResponse())
-                    {
-                        using (var reader = new StreamReader(response.GetResponseStream()))
-                        {
-                            string tmp = reader.ReadToEnd();
-                            Console.WriteLine(tmp);
-                        }
-                    }
-                }`
-
-**Sending SMS**
-
-`var uri = new Uri(string.Format(queryURL + querySMS));`
-
-                if (uri.Scheme == Uri.UriSchemeHttps)
-                {
-                    var request = WebRequest.Create(uri);
-                    request.Method = WebRequestMethods.Http.Get;
-
-                    using (var response = request.GetResponse())
-                    {
-                        using (var reader = new StreamReader(response.GetResponseStream()))
-                        {
-                            string tmp = reader.ReadToEnd();
-                            Console.WriteLine(tmp);
-                        }
-                    }
+                        Console.WriteLine(string.Format("Sent message to {0}", person.Value));
+                    }   
                 }
+                else
+                {
+                    MessageBox.Show("Please provide your Twilio credentials: AccountSid and AuthToken");
+                }
+            }
+        }
 
 **More examples**
 
