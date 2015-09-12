@@ -3,6 +3,8 @@ KinSector
 
 This application use [Kinect for Windows SDK](http://www.microsoft.com/en-us/kinectforwindows/ "Kinect for Windows SDK") with [Twilio](https://www.twilio.com/docs/csharp/install "Twilio"). 
 
+This application is based on Kinect V1 (from XBox360).
+
 ## Quick overview ##
 
 **KinSector** has three great features and it could be used as a part of home automation systems. It shows how to integrate Kinect device and features from mobile operator to increase security in your home.
